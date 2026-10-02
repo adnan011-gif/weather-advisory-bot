@@ -97,7 +97,7 @@ def test_normal_aggregation_for_each_agg_type(registry: FactsRegistry, sample_pa
     assert result.facts["humidity"] == 60.0
 
     # min agg: pressure_msl
-    assert result.facts["pressure_msl"] == 1013.25
+    assert result.facts["pressure_msl"] == 1013.2
 
 
 def test_window_hourly_inclusivity(registry: FactsRegistry, sample_payload: dict):

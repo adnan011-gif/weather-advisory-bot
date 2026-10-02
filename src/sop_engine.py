@@ -322,8 +322,9 @@ def evaluate_all(
     for sop in non_clear_sops:
         res = evaluate_sop(sop, facts, activity_tags)
         results.append(res)
-        if res.status != "not_applicable":
-            category_hazard_statuses.setdefault(sop.category, []).append(res.status)
+    applicable_hazard_statuses = [
+        r.status for r in results if r.status != "not_applicable" and r.match_type != "clear"
+    ]
 
     # Pass 2: Evaluate clear SOPs
     for sop in clear_sops:
@@ -343,18 +344,14 @@ def evaluate_all(
             )
             continue
 
-        # A clear SOP considers all non-clear applicable SOPs in its own category OR "general"
-        hazard_statuses = list(category_hazard_statuses.get(sop.category, []))
-        if sop.category != "general":
-            hazard_statuses.extend(category_hazard_statuses.get("general", []))
-
-        if any(st == "unevaluable" for st in hazard_statuses):
-            # A clear SOP never fires when any hazard SOP is unevaluable
+        # A clear SOP considers EVERY non-clear SOP applicable to the activity tags (any category)
+        if any(st == "unevaluable" for st in applicable_hazard_statuses):
+            # A clear SOP never fires when any applicable hazard SOP is unevaluable
             res_status = "unevaluable"
-        elif any(st == "matched" for st in hazard_statuses):
+        elif any(st == "matched" for st in applicable_hazard_statuses):
             res_status = "not_matched"
         else:
-            # All hazards were evaluable and none matched
+            # All applicable hazards were evaluable and none matched
             res_status = "matched"
 
         rendered_advice = render_advice_text(sop.advice, facts) if res_status == "matched" else ""

@@ -351,6 +351,11 @@ class OpenMeteoClient:
                 else:
                     computed_facts[fact.name] = None
 
+        # Round every numeric fact to 1 decimal place (single source of truth)
+        for k, v in computed_facts.items():
+            if v is not None and isinstance(v, (int, float)) and not isinstance(v, bool):
+                computed_facts[k] = round(float(v), 1)
+
         return ComputedFactsResult(
             facts=computed_facts,
             window_name=window_name,
@@ -375,13 +380,13 @@ class OpenMeteoClient:
                     unique_vals.add(v)
             return sorted(list(unique_vals))
         elif agg_type == "max":
-            return round(max(values), 2)
+            return round(max(values), 1)
         elif agg_type == "min":
-            return round(min(values), 2)
+            return round(min(values), 1)
         elif agg_type == "sum":
-            return round(sum(values), 2)
+            return round(sum(values), 1)
         elif agg_type == "mean":
-            return round(sum(values) / len(values), 2)
+            return round(sum(values) / len(values), 1)
         elif agg_type == "current":
-            return round(values[0], 2)
-        return round(values[0], 2)
+            return round(values[0], 1)
+        return round(values[0], 1)
