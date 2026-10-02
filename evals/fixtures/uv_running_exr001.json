@@ -1,0 +1,15 @@
+{
+  "description": "High UV index fixture triggering EXR-001 for running/outdoor_exercise",
+  "facts": {
+    "temperature": 29.0,
+    "apparent_temperature": 30.0,
+    "wind_speed": 10.0,
+    "wind_gusts": 15.0,
+    "precipitation_sum": 0.0,
+    "precipitation_probability_max": 0.0,
+    "uv_index_max": 9.5,
+    "weather_code": [0],
+    "pressure_msl": 1014.0,
+    "humidity": 45.0
+  }
+}

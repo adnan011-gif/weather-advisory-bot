@@ -1,0 +1,15 @@
+{
+  "description": "Benign picnic fixture triggering LSR-001 good tier",
+  "facts": {
+    "temperature": 23.0,
+    "apparent_temperature": 23.5,
+    "wind_speed": 8.0,
+    "wind_gusts": 12.0,
+    "precipitation_sum": 0.0,
+    "precipitation_probability_max": 10.0,
+    "uv_index_max": 3.0,
+    "weather_code": [0],
+    "pressure_msl": 1016.0,
+    "humidity": 50.0
+  }
+}

@@ -340,3 +340,21 @@ def test_raw_user_message_never_appears_in_compose_payload():
     compose_payload = llm.recorded_compose_payloads[0]
     assert secret_marker not in compose_payload
     assert raw_query not in compose_payload
+
+
+def test_raw_weather_stored_as_plain_dict_in_checkpoint():
+    """Verify that _raw_weather in state is stored as a plain dict, avoiding serializer warnings."""
+    memory = MemorySaver()
+    weather_client = FakeWeatherClient(facts_override={"wind_gusts": 42.0})
+    llm = FakeLLMClient()
+    graph = build_graph(weather_client=weather_client, llm=llm, checkpointer=memory)
+
+    config = {"configurable": {"thread_id": "checkpoint-dict-test"}}
+    graph.invoke({"query": "Can I cycle in Bhopal today?"}, config=config)
+
+    # Inspect checkpointed state
+    snapshot = graph.get_state(config)
+    raw_weather = snapshot.values.get("_raw_weather")
+    assert raw_weather is not None
+    assert isinstance(raw_weather, dict)
+    assert "payload" in raw_weather or "utc_offset_seconds" in raw_weather

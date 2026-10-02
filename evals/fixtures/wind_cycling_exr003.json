@@ -1,0 +1,15 @@
+{
+  "description": "High wind gust fixture triggering EXR-003 for cycling/two_wheeler",
+  "facts": {
+    "temperature": 24.0,
+    "apparent_temperature": 24.0,
+    "wind_speed": 28.0,
+    "wind_gusts": 48.0,
+    "precipitation_sum": 0.0,
+    "precipitation_probability_max": 10.0,
+    "uv_index_max": 4.0,
+    "weather_code": [0],
+    "pressure_msl": 1015.0,
+    "humidity": 50.0
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "description": "Adverse picnic conditions triggering LSR-001 poor tier",
+  "facts": {
+    "temperature": 22.0,
+    "apparent_temperature": 22.0,
+    "wind_speed": 18.0,
+    "wind_gusts": 32.0,
+    "precipitation_sum": 4.5,
+    "precipitation_probability_max": 55.0,
+    "uv_index_max": 4.0,
+    "weather_code": [61, 63],
+    "pressure_msl": 1009.0,
+    "humidity": 80.0
+  }
+}

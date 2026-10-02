@@ -1,0 +1,15 @@
+{
+  "description": "Moderate conditions triggering LSR-001 fair tier",
+  "facts": {
+    "temperature": 25.0,
+    "apparent_temperature": 26.0,
+    "wind_speed": 12.0,
+    "wind_gusts": 20.0,
+    "precipitation_sum": 0.5,
+    "precipitation_probability_max": 35.0,
+    "uv_index_max": 5.0,
+    "weather_code": [1, 2],
+    "pressure_msl": 1012.0,
+    "humidity": 60.0
+  }
+}

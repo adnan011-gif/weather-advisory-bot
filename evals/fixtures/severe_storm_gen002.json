@@ -1,0 +1,15 @@
+{
+  "description": "Severe deep convective storm fixture triggering GEN-002 override",
+  "facts": {
+    "temperature": 26.0,
+    "apparent_temperature": 42.0,
+    "wind_speed": 35.0,
+    "wind_gusts": 65.0,
+    "precipitation_sum": 72.0,
+    "precipitation_probability_max": 95.0,
+    "uv_index_max": 2.0,
+    "weather_code": [95],
+    "pressure_msl": 998.0,
+    "humidity": 92.0
+  }
+}

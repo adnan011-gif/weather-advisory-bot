@@ -171,13 +171,6 @@ class GraphNodes:
     # 3. Explain Decision (Deterministic)
     def explain_decision_node(self, state: WeatherAdvisoryState) -> Dict[str, Any]:
         """Explain the rationale behind a past advisory from the decision log."""
-        decision_log = state.get("decision_log", [])
-        if not decision_log:
-            return {
-                "kind": "explain",
-                "reply": "There is nothing to explain yet. Ask for a weather safety advisory first.",
-            }
-
         cited_ids = state.get("_cited_sop_ids", [])
         # Check if user cited an SOP ID that does not exist in registry
         for cid in cited_ids:
@@ -186,6 +179,13 @@ class GraphNodes:
                     "kind": "explain",
                     "reply": f"SOP '{cid}' does not exist in our policy registry.",
                 }
+
+        decision_log = state.get("decision_log", [])
+        if not decision_log:
+            return {
+                "kind": "explain",
+                "reply": "There is nothing to explain yet. Ask for a weather safety advisory first.",
+            }
 
         # Explain from the most recent decision log entry
         last_turn = decision_log[-1]
@@ -307,15 +307,17 @@ class GraphNodes:
 
         try:
             raw = self.weather_client.fetch_weather(lat, lon)
+            raw_dict = raw.model_dump() if hasattr(raw, "model_dump") else (dict(raw) if isinstance(raw, dict) else raw)
+            fetch_time = getattr(raw, "fetch_time", None) or (raw_dict.get("fetch_time") if isinstance(raw_dict, dict) else None)
             return {
-                "_raw_weather": raw,
-                "raw_fetch_time": raw.fetch_time,
+                "_raw_weather": raw_dict,
+                "raw_fetch_time": fetch_time,
             }
         except WeatherAPIError as err:
             return {
                 "kind": "format_error",
                 "error_message": str(err),
-                "reply": f"Weather forecast service is temporarily unavailable: {err}",
+                "reply": "Weather forecast service is temporarily unavailable. Please try again later.",
             }
 
     # 7. Compute Facts (Deterministic)

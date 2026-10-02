@@ -1,0 +1,15 @@
+{
+  "description": "Missing meteorological facts (uv_index_max and wind_gusts are null) preventing clear baseline evaluation",
+  "facts": {
+    "temperature": 24.0,
+    "apparent_temperature": 24.0,
+    "wind_speed": 10.0,
+    "wind_gusts": null,
+    "precipitation_sum": 0.0,
+    "precipitation_probability_max": 10.0,
+    "uv_index_max": null,
+    "weather_code": [0],
+    "pressure_msl": 1015.0,
+    "humidity": 50.0
+  }
+}

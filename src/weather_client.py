@@ -255,12 +255,15 @@ class OpenMeteoClient:
         Raises:
             WindowPassedError: If the requested window has fully passed.
         """
-        payload = raw_data.payload if isinstance(raw_data, RawWeatherData) else raw_data
-        fetch_time = (
-            raw_data.fetch_time
-            if isinstance(raw_data, RawWeatherData)
-            else datetime.datetime.now(datetime.timezone.utc).isoformat()
-        )
+        if isinstance(raw_data, RawWeatherData):
+            payload = raw_data.payload
+            fetch_time = raw_data.fetch_time
+        elif isinstance(raw_data, dict):
+            payload = raw_data.get("payload", raw_data) if "payload" in raw_data and isinstance(raw_data["payload"], dict) else raw_data
+            fetch_time = raw_data.get("fetch_time") or datetime.datetime.now(datetime.timezone.utc).isoformat()
+        else:
+            payload = raw_data
+            fetch_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         utc_offset_seconds = int(payload.get("utc_offset_seconds", 0))
         loc_tz = datetime.timezone(datetime.timedelta(seconds=utc_offset_seconds))

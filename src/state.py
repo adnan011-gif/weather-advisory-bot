@@ -60,5 +60,5 @@ class WeatherAdvisoryState(TypedDict, total=False):
     _parsed_tags: List[str]
     _parsed_time: Optional[str]
     _cited_sop_ids: List[str]
-    _raw_weather: Any
+    _raw_weather: Optional[Dict[str, Any]]
     _raw_composed: Optional[str]
