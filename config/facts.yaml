@@ -1,0 +1,84 @@
+# Facts Registry & Window Definitions for Open-Meteo Data
+# All window boundaries are evaluated in the target location's local time.
+
+windows:
+  now:
+    type: "relative_hours"
+    start_offset_hours: 0
+    end_offset_hours: 3
+  today:
+    type: "remainder_of_day"
+    start_hour: 0
+    end_hour: 23
+  this_evening:
+    type: "fixed_hours"
+    start_hour: 17
+    end_hour: 21
+  tomorrow:
+    type: "next_day_hours"
+    start_hour: 6
+    end_hour: 22
+
+facts:
+  - name: temperature
+    source: hourly
+    open_meteo_var: temperature_2m
+    agg: mean
+    unit: "°C"
+
+  - name: apparent_temperature
+    source: hourly
+    open_meteo_var: apparent_temperature
+    agg: max
+    unit: "°C"
+
+  - name: wind_speed
+    source: hourly
+    open_meteo_var: wind_speed_10m
+    agg: max
+    unit: "km/h"
+
+  - name: wind_gusts
+    source: hourly
+    open_meteo_var: wind_gusts_10m
+    agg: max
+    unit: "km/h"
+
+  - name: precipitation_sum
+    source: hourly
+    open_meteo_var: precipitation
+    agg: sum
+    unit: "mm"
+
+  - name: precipitation_probability_max
+    source: hourly
+    open_meteo_var: precipitation_probability
+    agg: max
+    unit: "%"
+
+  - name: uv_index_max
+    source: hourly
+    open_meteo_var: uv_index
+    agg: max
+    fixed_window:
+      start_hour: 11
+      end_hour: 16
+    unit: ""
+
+  - name: weather_code
+    source: hourly
+    open_meteo_var: weather_code
+    agg: set
+    unit: ""
+
+  - name: pressure_msl
+    source: hourly
+    open_meteo_var: pressure_msl
+    agg: mean
+    unit: "hPa"
+
+  - name: humidity
+    source: hourly
+    open_meteo_var: relative_humidity_2m
+    agg: mean
+    unit: "%"
