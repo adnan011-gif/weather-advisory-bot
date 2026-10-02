@@ -1,0 +1,18 @@
+id: GEN-001
+title: "Severe Thunderstorm General Hazard"
+category: "general"
+severity: "critical"
+priority: 1
+applies_to:
+  - "any"
+match_type: "numeric"
+override: false
+condition:
+  fact: "weather_code"
+  op: "intersects"
+  value:
+    - 95
+    - 96
+    - 99
+advice: "Severe thunderstorms with lightning detected in the forecast window (weather codes {weather_code}). Avoid all outdoor activities, seek substantial indoor shelter immediately, and stay clear of open fields and elevated terrain."
+rationale: "Policy choice: Thunderstorms present immediate life-safety hazards from cloud-to-ground lightning strikes and sudden microburst winds."

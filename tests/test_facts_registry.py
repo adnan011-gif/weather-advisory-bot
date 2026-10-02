@@ -89,9 +89,51 @@ def test_normal_aggregation_for_each_agg_type(registry: FactsRegistry, sample_pa
     # indices: 12 (even: 0.0), 13 (odd: 1.5), 14 (even: 0.0), 15 (odd: 1.5) -> sum = 3.0
     assert result.facts["precipitation_sum"] == 3.0
 
-    # mean agg: temperature mean for hours 12, 13, 14, 15
-    # temps: 27, 28, 29, 30 -> mean = 28.5
-    assert result.facts["temperature"] == 28.5
+    # max agg: temperature max for hours 12, 13, 14, 15
+    # temps: 27, 28, 29, 30 -> max = 30.0
+    assert result.facts["temperature"] == 30.0
+
+    # mean agg: humidity
+    assert result.facts["humidity"] == 60.0
+
+    # min agg: pressure_msl
+    assert result.facts["pressure_msl"] == 1013.25
+
+
+def test_window_hourly_inclusivity(registry: FactsRegistry, sample_payload: dict):
+    """Test start-inclusive and end-exclusive hourly window semantics:
+    - at 14:15 the 14:00 hour is included for 'today'
+    - at 19:15 the 19:00 hour is included for 'this_evening'
+    - the 21:00 hour is excluded for 'this_evening'
+    """
+    client = OpenMeteoClient(facts_registry=registry)
+
+    # 1. At 14:15, test that 14:00 is included in 'today'
+    # In sample_payload, hour 14 has temperature 15 + 14 = 29.0
+    # Let's set temperature for hours 0..13 to None or low, hour 14 to 99.0
+    payload_today = dict(sample_payload)
+    hourly_copy = dict(sample_payload["hourly"])
+    hourly_copy["temperature_2m"] = [99.0 if h == 14 else 10.0 for h in range(24)]
+    payload_today["hourly"] = hourly_copy
+
+    now_1415 = datetime.datetime(2026, 10, 2, 14, 15, tzinfo=datetime.timezone.utc)
+    res_today = client.compute_facts(payload_today, window_name="today", now_local=now_1415)
+    # If 14:00 was excluded, max would be 10.0. Since 14:00 is included, max is 99.0!
+    assert res_today.facts["temperature"] == 99.0
+
+    # 2. At 19:15, test that 19:00 is included in 'this_evening' and 21:00 is excluded
+    # For this_evening (17:00 - 21:00):
+    # Set hour 19 to 50.0, hour 20 to 10.0, hour 21 to 100.0
+    hourly_eve = dict(sample_payload["hourly"])
+    hourly_eve["temperature_2m"] = [
+        50.0 if h == 19 else (100.0 if h == 21 else 10.0) for h in range(24)
+    ]
+    payload_today["hourly"] = hourly_eve
+
+    now_1915 = datetime.datetime(2026, 10, 2, 19, 15, tzinfo=datetime.timezone.utc)
+    res_eve = client.compute_facts(payload_today, window_name="this_evening", now_local=now_1915)
+    # Hour 19:00 is included (50.0). Hour 21:00 is EXCLUDED (not 100.0). Max should be 50.0.
+    assert res_eve.facts["temperature"] == 50.0
 
 
 def test_null_hourly_values_and_all_null(registry: FactsRegistry):

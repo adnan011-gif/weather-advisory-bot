@@ -1,0 +1,15 @@
+id: VUL-003
+title: "Surface Heat and Pet Safety Advisory"
+category: "vulnerable_groups"
+severity: "moderate"
+priority: 10
+applies_to:
+  - "pets"
+match_type: "numeric"
+override: false
+condition:
+  fact: "temperature"
+  op: ">="
+  value: 33.0
+advice: "Ambient temperature reaches {temperature}°C. Asphalt and pavement surfaces absorb solar radiation and can burn paw pads within minutes. Restrict pet walks to grassy surfaces, shorten outing durations, and carry water."
+rationale: "Policy choice: Dark paved surfaces heat significantly above ambient air temperatures when temperatures exceed 33°C, presenting paw contact burn risks."

@@ -147,15 +147,18 @@ class FactsRegistry:
         date_tomorrow = date_today + datetime.timedelta(days=1)
 
         # Base window calculation
+        curr_hour = now_local.replace(minute=0, second=0, microsecond=0)
+
         if win_def.type == "relative_hours":
             start_off = win_def.start_offset_hours or 0
             end_off = win_def.end_offset_hours or 3
-            curr_hour = now_local.replace(minute=0, second=0, microsecond=0)
             base_start = curr_hour + datetime.timedelta(hours=start_off)
-            base_end = curr_hour + datetime.timedelta(hours=end_off)
+            # End exclusive: add 1 hour so the end_offset hour itself is included
+            base_end = curr_hour + datetime.timedelta(hours=end_off + 1)
         elif win_def.type == "remainder_of_day":
             base_start = datetime.datetime.combine(date_today, datetime.time(win_def.start_hour or 0, 0))
-            base_end = datetime.datetime.combine(date_today, datetime.time(win_def.end_hour or 23, 59, 59))
+            # 24:00 of today is 00:00 of tomorrow
+            base_end = datetime.datetime.combine(date_tomorrow, datetime.time(0, 0))
         elif win_def.type == "fixed_hours":
             base_start = datetime.datetime.combine(date_today, datetime.time(win_def.start_hour or 17, 0))
             base_end = datetime.datetime.combine(date_today, datetime.time(win_def.end_hour or 21, 0))
@@ -168,9 +171,11 @@ class FactsRegistry:
         # If a fact has its own fixed window, apply it to the target date
         if fixed_window is not None:
             target_date = base_start.date()
-            end_time = datetime.time(fixed_window.end_hour, 0) if fixed_window.end_hour < 24 else datetime.time(23, 59, 59)
+            if fixed_window.end_hour >= 24:
+                base_end = datetime.datetime.combine(target_date + datetime.timedelta(days=1), datetime.time(0, 0))
+            else:
+                base_end = datetime.datetime.combine(target_date, datetime.time(fixed_window.end_hour, 0))
             base_start = datetime.datetime.combine(target_date, datetime.time(fixed_window.start_hour, 0))
-            base_end = datetime.datetime.combine(target_date, end_time)
 
         # Ensure timezone match if now_local has tzinfo
         if now_local.tzinfo is not None:
@@ -178,6 +183,10 @@ class FactsRegistry:
                 base_start = base_start.replace(tzinfo=now_local.tzinfo)
             if base_end.tzinfo is None:
                 base_end = base_end.replace(tzinfo=now_local.tzinfo)
+
+        # For relative_hours, prospective window starting at curr_hour
+        if win_def.type == "relative_hours":
+            return base_start, base_end, False, False
 
         # Check elapsed status
         if now_local >= base_end:
@@ -187,6 +196,7 @@ class FactsRegistry:
         effective_start = base_start
         if now_local > base_start:
             is_partly_passed = True
-            effective_start = now_local
+            # Floor window start to top of current hour so current hour is included
+            effective_start = curr_hour
 
         return effective_start, base_end, is_partly_passed, False

@@ -327,7 +327,8 @@ class OpenMeteoClient:
                 window_values: List[float] = []
 
                 for dt, val in zip(hourly_datetimes, var_values):
-                    if fact_start <= dt <= fact_end:
+                    # Start inclusive, end exclusive
+                    if fact_start <= dt < fact_end:
                         if val is not None:
                             try:
                                 window_values.append(float(val))

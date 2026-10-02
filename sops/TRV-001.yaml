@@ -1,0 +1,17 @@
+id: TRV-001
+title: "Elevated Rain Probability Travel Precaution"
+category: "travel"
+severity: "low"
+priority: 15
+applies_to:
+  - "commute"
+  - "driving"
+  - "travel"
+match_type: "numeric"
+override: false
+condition:
+  fact: "precipitation_probability_max"
+  op: ">="
+  value: 70.0
+advice: "Precipitation probability is {precipitation_probability_max}%. Expect potential transit delays, localized surface water pooling, and reduced commuting speeds. Verify local transport alerts and depart with extra buffer time."
+rationale: "Policy choice: High rain probabilities frequently trigger traffic congestion, transit slow-downs, and visibility drops."

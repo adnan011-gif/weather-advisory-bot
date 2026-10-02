@@ -1,0 +1,14 @@
+id: CLR-EXR
+title: "Outdoor Exercise Normal Weather Baseline"
+category: "outdoor_exercise"
+severity: "info"
+priority: 100
+applies_to:
+  - "running"
+  - "cycling"
+  - "hiking"
+  - "outdoor_exercise"
+match_type: "clear"
+override: false
+advice: "No policy warning threshold was triggered for this window; this is not a guarantee of safety; check local alerts."
+rationale: "Policy choice: Baseline clear condition for outdoor exercise activities when no category or general hazards are triggered."

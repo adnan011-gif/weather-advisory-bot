@@ -32,6 +32,7 @@ class SOPResult(BaseModel):
     override: bool = False
     priority: int = 100
     category: str = "general"
+    match_type: str = "numeric"
 
 
 def _format_fact_value(val: Any) -> str:
@@ -214,6 +215,7 @@ def evaluate_sop(
             override=sop.override,
             priority=sop.priority,
             category=sop.category,
+            match_type=sop.match_type,
         )
 
     # 1. Numeric or Composite SOP
@@ -240,6 +242,7 @@ def evaluate_sop(
             override=sop.override,
             priority=sop.priority,
             category=sop.category,
+            match_type=sop.match_type,
         )
 
     # 2. Semantic SOP
@@ -265,6 +268,7 @@ def evaluate_sop(
                         override=sop.override,
                         priority=sop.priority,
                         category=sop.category,
+                        match_type=sop.match_type,
                     )
                 if cond_res is None:
                     has_unevaluable_tier = True
@@ -279,6 +283,7 @@ def evaluate_sop(
             override=sop.override,
             priority=sop.priority,
             category=sop.category,
+            match_type=sop.match_type,
         )
 
     # 3. Clear SOP placeholder if called standalone
@@ -291,6 +296,7 @@ def evaluate_sop(
         override=sop.override,
         priority=sop.priority,
         category=sop.category,
+        match_type=sop.match_type,
     )
 
 
@@ -301,7 +307,7 @@ def evaluate_all(
 ) -> Tuple[List[SOPResult], List[str], List[str]]:
     """Evaluate all SOPs against computed facts and activity tags.
 
-    Enforces category-wide evaluability rules for 'clear' baseline SOPs.
+    Enforces category-wide and general-wide evaluability rules for 'clear' baseline SOPs.
 
     Returns:
         Tuple of (all_results, matched_ids, unevaluable_ids)
@@ -332,11 +338,15 @@ def evaluate_all(
                     override=sop.override,
                     priority=sop.priority,
                     category=sop.category,
+                    match_type=sop.match_type,
                 )
             )
             continue
 
-        hazard_statuses = category_hazard_statuses.get(sop.category, [])
+        # A clear SOP considers all non-clear applicable SOPs in its own category OR "general"
+        hazard_statuses = list(category_hazard_statuses.get(sop.category, []))
+        if sop.category != "general":
+            hazard_statuses.extend(category_hazard_statuses.get("general", []))
 
         if any(st == "unevaluable" for st in hazard_statuses):
             # A clear SOP never fires when any hazard SOP is unevaluable
@@ -358,6 +368,7 @@ def evaluate_all(
                 override=sop.override,
                 priority=sop.priority,
                 category=sop.category,
+                match_type=sop.match_type,
             )
         )
 

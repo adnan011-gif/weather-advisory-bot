@@ -1,0 +1,15 @@
+id: VUL-002
+title: "Thermal Stress Caution for Elderly Individuals"
+category: "vulnerable_groups"
+severity: "high"
+priority: 5
+applies_to:
+  - "elderly"
+match_type: "numeric"
+override: false
+condition:
+  fact: "apparent_temperature"
+  op: ">="
+  value: 36.0
+advice: "Apparent temperature reaches {apparent_temperature}°C. Elderly individuals should avoid prolonged outdoor exposure and strenuous activity. Remain in well-ventilated or air-conditioned environments and monitor hydration."
+rationale: "Policy choice: Reduced cardiovascular reserve and blunted thirst response make older adults vulnerable to heat illness at perceived temperatures of 36°C and above."

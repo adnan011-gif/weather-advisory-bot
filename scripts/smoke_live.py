@@ -45,16 +45,16 @@ def main() -> None:
         print(f"    Window Note:          {computed.window_note}")
 
     print("\n[4] Evaluated Facts Registry Values:")
-    print("-" * 55)
-    print(f"{'Fact Name':<30} | {'Value':<12} | {'Unit':<8}")
-    print("-" * 55)
+    print("-" * 75)
+    print(f"{'Fact Name':<28} | {'Source':<8} | {'Agg':<8} | {'Value':<14} | {'Unit':<8}")
+    print("-" * 75)
 
     for fact_def in registry.config.facts:
         val = computed.facts.get(fact_def.name)
         val_str = str(val) if val is not None else "None"
         unit_str = fact_def.unit if fact_def.unit else "-"
-        print(f"{fact_def.name:<30} | {val_str:<12} | {unit_str:<8}")
-    print("-" * 55)
+        print(f"{fact_def.name:<28} | {fact_def.source:<8} | {fact_def.agg:<8} | {val_str:<14} | {unit_str:<8}")
+    print("-" * 75)
     print("Smoke test successfully completed.")
 
 

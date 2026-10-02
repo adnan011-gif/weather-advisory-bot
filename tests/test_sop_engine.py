@@ -563,3 +563,76 @@ def test_thresholds_extraction(tmp_path: Path, facts_registry: FactsRegistry):
     assert 32.5 in thresholds
     assert 15 in thresholds
     assert 45 in thresholds
+
+
+def test_general_hazard_blocks_clear_sop(tmp_path: Path, facts_registry: FactsRegistry):
+    """Test that:
+    1. A matched general hazard blocks every clear SOP.
+    2. An unevaluable general hazard blocks every clear SOP.
+    3. Clear SOP never appears in also_applies.
+    """
+    gen_hazard = {
+        "id": "GEN-TEST",
+        "title": "Severe General Storm",
+        "category": "general",
+        "severity": "critical",
+        "priority": 1,
+        "applies_to": ["any"],
+        "match_type": "numeric",
+        "condition": {"fact": "wind_speed", "op": ">=", "value": 50.0},
+        "advice": "Severe storm in area.",
+    }
+    clear_exr = {
+        "id": "CLR-EXR",
+        "title": "Clear Exercise",
+        "category": "outdoor_exercise",
+        "severity": "info",
+        "priority": 100,
+        "applies_to": ["running"],
+        "match_type": "clear",
+        "advice": "Clear for exercise.",
+    }
+    clear_trv = {
+        "id": "CLR-TRV",
+        "title": "Clear Travel",
+        "category": "travel",
+        "severity": "info",
+        "priority": 100,
+        "applies_to": ["driving"],
+        "match_type": "clear",
+        "advice": "Clear for travel.",
+    }
+
+    with open(tmp_path / "gen.yaml", "w", encoding="utf-8") as f:
+        yaml.dump(gen_hazard, f)
+    with open(tmp_path / "clr_exr.yaml", "w", encoding="utf-8") as f:
+        yaml.dump(clear_exr, f)
+    with open(tmp_path / "clr_trv.yaml", "w", encoding="utf-8") as f:
+        yaml.dump(clear_trv, f)
+
+    sops = load_sops(tmp_path, facts_registry)
+
+    # 1. Matched general hazard (wind = 60) blocks both clear SOPs
+    results_matched, matched_ids, _ = evaluate_all(sops, {"wind_speed": 60.0}, ["running", "driving"])
+    assert "GEN-TEST" in matched_ids
+    assert "CLR-EXR" not in matched_ids
+    assert "CLR-TRV" not in matched_ids
+
+    # 2. Unevaluable general hazard (wind = None) blocks both clear SOPs from firing (sets them unevaluable)
+    results_uneval, matched_uneval, uneval_ids = evaluate_all(sops, {"wind_speed": None}, ["running", "driving"])
+    assert "GEN-TEST" in uneval_ids
+    assert "CLR-EXR" in uneval_ids
+    assert "CLR-TRV" in uneval_ids
+    assert len(matched_uneval) == 0
+
+    # 3. Benign conditions (wind = 10): both clear SOPs match
+    results_clear, matched_clear, _ = evaluate_all(sops, {"wind_speed": 10.0}, ["running", "driving"])
+    assert "CLR-EXR" in matched_clear
+    assert "CLR-TRV" in matched_clear
+
+    # Check conflict resolution: primary is CLR-EXR (by ID tie-break or priority), but also_applies has NO clear SOPs!
+    res_clear = resolve([r for r in results_clear if r.status == "matched"])
+    assert res_clear.primary is not None
+    assert res_clear.primary.match_type == "clear"
+    # Clear SOPs must never appear in also_applies
+    assert len(res_clear.also_applies) == 0

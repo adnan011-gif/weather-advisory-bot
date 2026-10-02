@@ -1,0 +1,13 @@
+id: CLR-TRV
+title: "Travel Normal Weather Baseline"
+category: "travel"
+severity: "info"
+priority: 100
+applies_to:
+  - "commute"
+  - "driving"
+  - "travel"
+match_type: "clear"
+override: false
+advice: "No policy warning threshold was triggered for this window; this is not a guarantee of safety; check local alerts."
+rationale: "Policy choice: Baseline clear condition for transport and travel when no category or general hazards are triggered."

@@ -1,0 +1,13 @@
+id: CLR-VUL
+title: "Vulnerable Groups Normal Weather Baseline"
+category: "vulnerable_groups"
+severity: "info"
+priority: 100
+applies_to:
+  - "children"
+  - "elderly"
+  - "pets"
+match_type: "clear"
+override: false
+advice: "No policy warning threshold was triggered for this window; this is not a guarantee of safety; check local alerts."
+rationale: "Policy choice: Baseline clear condition for vulnerable population groups when no category or general hazards are triggered."

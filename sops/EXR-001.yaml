@@ -1,0 +1,18 @@
+id: EXR-001
+title: "High UV Radiation Exercise Advisory"
+category: "outdoor_exercise"
+severity: "moderate"
+priority: 10
+applies_to:
+  - "running"
+  - "hiking"
+  - "cycling"
+  - "outdoor_exercise"
+match_type: "numeric"
+override: false
+condition:
+  fact: "uv_index_max"
+  op: ">="
+  value: 8.0
+advice: "Peak UV index reaches {uv_index_max}. Avoid unprotected outdoor exercise during peak sunlight hours. Apply broad-spectrum sunscreen, wear UV-protective clothing, or reschedule workouts to early morning or evening."
+rationale: "Policy choice: UV index of 8 or above poses very high risk of skin and ocular damage during prolonged unshaded exertion."

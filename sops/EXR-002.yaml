@@ -1,0 +1,18 @@
+id: EXR-002
+title: "Extreme Heat Index Exercise Restriction"
+category: "outdoor_exercise"
+severity: "high"
+priority: 5
+applies_to:
+  - "running"
+  - "hiking"
+  - "cycling"
+  - "outdoor_exercise"
+match_type: "numeric"
+override: false
+condition:
+  fact: "apparent_temperature"
+  op: ">="
+  value: 40.0
+advice: "Perceived temperature reaches {apparent_temperature}°C. Strenuous outdoor workouts should not proceed under extreme heat conditions due to elevated risk of heat exhaustion and heat stroke. Reschedule to indoor facilities or cooler hours."
+rationale: "Policy choice: Apparent temperatures at or above 40°C significantly inhibit metabolic heat dissipation during endurance exertion."

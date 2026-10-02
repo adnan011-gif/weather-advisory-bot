@@ -1,5 +1,6 @@
 # Facts Registry & Window Definitions for Open-Meteo Data
 # All window boundaries are evaluated in the target location's local time.
+# Inclusivity policy: start is INCLUSIVE, end is EXCLUSIVE (e.g. 17:00-21:00 includes hours 17, 18, 19, 20).
 
 windows:
   now:
@@ -9,7 +10,7 @@ windows:
   today:
     type: "remainder_of_day"
     start_hour: 0
-    end_hour: 23
+    end_hour: 24
   this_evening:
     type: "fixed_hours"
     start_hour: 17
@@ -23,7 +24,7 @@ facts:
   - name: temperature
     source: hourly
     open_meteo_var: temperature_2m
-    agg: mean
+    agg: max
     unit: "°C"
 
   - name: apparent_temperature
@@ -60,9 +61,6 @@ facts:
     source: hourly
     open_meteo_var: uv_index
     agg: max
-    fixed_window:
-      start_hour: 11
-      end_hour: 16
     unit: ""
 
   - name: weather_code
@@ -74,7 +72,7 @@ facts:
   - name: pressure_msl
     source: hourly
     open_meteo_var: pressure_msl
-    agg: mean
+    agg: min
     unit: "hPa"
 
   - name: humidity

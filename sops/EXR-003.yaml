@@ -1,0 +1,16 @@
+id: EXR-003
+title: "Strong Wind Gust Hazard for Cycling and Two-Wheelers"
+category: "outdoor_exercise"
+severity: "high"
+priority: 5
+applies_to:
+  - "cycling"
+  - "two_wheeler"
+match_type: "numeric"
+override: false
+condition:
+  fact: "wind_gusts"
+  op: ">="
+  value: 40.0
+advice: "Peak wind gusts reach {wind_gusts} km/h. This is a direct physical stability risk, not merely a comfort issue. Sudden crosswinds can destabilize balance or force riders into vehicular traffic lanes. Avoid riding along exposed bridges, ridges, and open corridors."
+rationale: "Policy choice: Lateral aerodynamic forces from gusts exceeding 40 km/h undermine steering authority on two-wheeled conveyances."

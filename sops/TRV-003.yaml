@@ -1,0 +1,17 @@
+id: TRV-003
+title: "High Wind Gust Travel Warning"
+category: "travel"
+severity: "high"
+priority: 5
+applies_to:
+  - "driving"
+  - "travel"
+  - "two_wheeler"
+match_type: "numeric"
+override: false
+condition:
+  fact: "wind_gusts"
+  op: ">="
+  value: 60.0
+advice: "Wind gusts are forecast up to {wind_gusts} km/h. High winds create severe handling hazards, particularly for high-profile vehicles, trailers, and two-wheelers. Exercise extreme caution on overpasses and open highways, hold steering firmly with both hands, and consider delaying travel."
+rationale: "Policy choice: Gusts of 60 km/h or higher can shift vehicle trajectory, dislodge road debris, and overturn unshielded light transport."

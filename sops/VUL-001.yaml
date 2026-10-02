@@ -1,0 +1,19 @@
+id: VUL-001
+title: "Heat and Solar Exposure Safeguards for Children"
+category: "vulnerable_groups"
+severity: "moderate"
+priority: 10
+applies_to:
+  - "children"
+match_type: "composite"
+override: false
+condition:
+  any_of:
+    - fact: "apparent_temperature"
+      op: ">="
+      value: 35.0
+    - fact: "uv_index_max"
+      op: ">="
+      value: 6.0
+advice: "Thermal conditions (apparent temperature {apparent_temperature}°C, UV index {uv_index_max}) require limiting continuous outdoor play for children. Enforce shaded rest periods, ensure regular water intake, and apply protective sunscreen."
+rationale: "Policy choice: Children produce more metabolic heat relative to body mass and possess less developed thermoregulatory perspiration than adults."

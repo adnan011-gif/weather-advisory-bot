@@ -94,8 +94,9 @@ def resolve(matched_results: List[SOPResult]) -> ConflictResolution:
     # Sort candidates
     sorted_matches = sorted(matched_results, key=_sort_key)
     primary = sorted_matches[0]
-    also_applies = sorted_matches[1:]
-    runner_up = also_applies[0] if also_applies else None
+    # Clear SOPs must never appear in also_applies
+    also_applies = [r for r in sorted_matches[1:] if r.match_type != "clear"]
+    runner_up = sorted_matches[1] if len(sorted_matches) > 1 else None
 
     reason = _build_reason(primary, runner_up)
 

@@ -1,0 +1,16 @@
+id: TRV-002
+title: "Wet Surface Hazard for Two-Wheelers"
+category: "travel"
+severity: "moderate"
+priority: 10
+applies_to:
+  - "two_wheeler"
+  - "cycling"
+match_type: "numeric"
+override: false
+condition:
+  fact: "precipitation_sum"
+  op: ">="
+  value: 5.0
+advice: "Cumulative rainfall reaches {precipitation_sum} mm. Wet roadway surfaces sharply degrade tire traction, lengthen braking distances, and conceal roadway hazards. Reduce operating speed, avoid sudden banking or hard braking over painted road lines and metal manholes."
+rationale: "Policy choice: Measurable rainfall accumulation above 5 mm causes surface water film that increases hydroplaning risk for narrow tires."

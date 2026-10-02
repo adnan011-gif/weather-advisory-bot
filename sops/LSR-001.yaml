@@ -1,0 +1,72 @@
+id: LSR-001
+title: "Picnic and Outdoor Event Weather Suitability"
+category: "leisure"
+severity: "moderate"
+priority: 10
+applies_to:
+  - "picnic"
+  - "outdoor_event"
+match_type: "semantic"
+override: false
+intent_description: "is today good for a picnic or outing"
+rubric:
+  - name: "poor"
+    severity: "moderate"
+    condition:
+      any_of:
+        - fact: "precipitation_probability_max"
+          op: ">="
+          value: 50.0
+        - fact: "precipitation_sum"
+          op: ">="
+          value: 2.0
+        - fact: "wind_gusts"
+          op: ">="
+          value: 40.0
+        - fact: "apparent_temperature"
+          op: ">="
+          value: 38.0
+        - fact: "weather_code"
+          op: "intersects"
+          value: [95, 96, 99]
+    advice: "Conditions are poor for a picnic or outdoor gathering due to rain, strong gusts, high heat, or storm risk. An indoor venue is advised."
+
+  - name: "fair"
+    severity: "low"
+    condition:
+      any_of:
+        - fact: "precipitation_probability_max"
+          op: ">="
+          value: 30.0
+        - fact: "wind_gusts"
+          op: ">="
+          value: 30.0
+        - fact: "apparent_temperature"
+          op: ">="
+          value: 34.0
+        - fact: "uv_index_max"
+          op: ">="
+          value: 8.0
+    advice: "Conditions are fair but marginal for outdoor events. Prepare backup rain cover, shade, or sun protection if proceeding."
+
+  - name: "good"
+    severity: "info"
+    condition:
+      all_of:
+        - fact: "precipitation_probability_max"
+          op: "<"
+          value: 30.0
+        - fact: "precipitation_sum"
+          op: "<"
+          value: 2.0
+        - fact: "wind_gusts"
+          op: "<"
+          value: 30.0
+        - fact: "apparent_temperature"
+          op: "<"
+          value: 34.0
+        - fact: "uv_index_max"
+          op: "<"
+          value: 8.0
+    advice: "Weather conditions are favorable and comfortable for picnics and outdoor gatherings."
+rationale: "Policy choice: Tiered comfort rubric for leisure outings based on rain probability, wind disturbance, heat, and solar intensity."

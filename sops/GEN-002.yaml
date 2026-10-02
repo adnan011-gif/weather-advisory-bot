@@ -1,0 +1,29 @@
+# this is a proxy because Open-Meteo has no IMD advisories; 64.5 mm is the IMD "heavy rain" lower bound; the pressure threshold is a heuristic policy choice.
+id: GEN-002
+title: "Severe Low-Pressure Deep Convective Rain System Warning"
+category: "general"
+severity: "critical"
+priority: 1
+applies_to:
+  - "any"
+match_type: "composite"
+override: true
+condition:
+  all_of:
+    - any_of:
+        - fact: "precipitation_sum"
+          op: ">="
+          value: 64.5
+        - fact: "weather_code"
+          op: "intersects"
+          value:
+            - 65
+            - 82
+            - 95
+            - 96
+            - 99
+    - fact: "pressure_msl"
+      op: "<="
+      value: 1004.0
+advice: "A severe low-pressure precipitation system (barometric pressure {pressure_msl} hPa, total rainfall {precipitation_sum} mm) is actively impacting the area. Severe flooding, flash floods, and transit system collapse are expected. Suspend non-essential movement and secure indoor shelter before considering individual activity safety."
+rationale: "India Meteorological Department (IMD) classifies rainfall >= 64.5 mm as heavy rain; the barometric depression threshold <= 1004 hPa is a heuristic policy choice proxy for organized synoptic low-pressure storm systems."
