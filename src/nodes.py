@@ -15,7 +15,6 @@ from src.weather_client import (
     WeatherAPIError,
     WindowPassedError,
     sanitize_location,
-    RawWeatherData,
 )
 from src.sop_schema import SOP
 from src.sop_engine import evaluate_all, SOPResult, extract_thresholds
@@ -54,29 +53,56 @@ class GraphNodes:
 
         try:
             parsed = parse_intent(self.llm, query, self.vocabulary)
+            model_used = getattr(parsed, "model_used", None) or getattr(self.llm, "model_used", None)
             return {
                 "messages": msgs,
                 "kind": None,
                 "error_message": None,
+                "error_reason": None,
+                "model_used": model_used,
                 "_parsed_intent": parsed.intent,
                 "_parsed_location": parsed.location,
                 "_parsed_tags": parsed.activity_tags,
                 "_parsed_time": parsed.time_ref,
                 "_cited_sop_ids": parsed.cited_sop_ids,
             }
-        except ParseFailed:
+        except ParseFailed as err:
+            reason = getattr(err, "reason", "invalid_json")
+            model_used = getattr(self.llm, "model_used", None)
+
+            if reason == "safety_blocked":
+                kind = "request_blocked"
+            elif reason in ("rate_limited", "empty_response") or reason.startswith("api_error"):
+                kind = "llm_unavailable"
+            else:
+                kind = "parse_failed"
+
+            decision_log = list(state.get("decision_log", []))
+            decision_log.append({
+                "turn": len(decision_log) + 1,
+                "kind": kind,
+                "error_reason": reason,
+                "model_used": model_used,
+            })
             return {
                 "messages": msgs,
-                "kind": "parse_failed",
-                "reply": "I couldn't understand your request, please rephrase.",
+                "kind": kind,
+                "error_reason": reason,
+                "model_used": model_used,
+                "decision_log": decision_log,
             }
 
     # 2. Intent Routing Helper (Deterministic)
     @staticmethod
     def route_intent(state: WeatherAdvisoryState) -> str:
-        """Route to appropriate graph branch based on parsed intent."""
-        if state.get("kind") == "parse_failed":
+        """Route to appropriate graph branch based on parsed intent or error outcome."""
+        kind = state.get("kind")
+        if kind == "parse_failed":
             return "parse_failed"
+        elif kind == "llm_unavailable":
+            return "llm_unavailable"
+        elif kind == "request_blocked":
+            return "request_blocked"
 
         intent = state.get("_parsed_intent")
         if intent == "out_of_scope":
@@ -86,6 +112,27 @@ class GraphNodes:
         elif intent == "advice":
             return "resolve_context"
         return "no_guidance"
+
+    def parse_failed_node(self, state: WeatherAdvisoryState) -> Dict[str, Any]:
+        """User message could not be parsed into valid schema."""
+        return {
+            "kind": "parse_failed",
+            "reply": "I couldn't understand your request, please rephrase.",
+        }
+
+    def llm_unavailable_node(self, state: WeatherAdvisoryState) -> Dict[str, Any]:
+        """Language service unavailable (rate limit, daily quota, or API failure)."""
+        return {
+            "kind": "llm_unavailable",
+            "reply": "My language service is temporarily unavailable (usage limit reached), so I can't answer right now. Please try again later.",
+        }
+
+    def request_blocked_node(self, state: WeatherAdvisoryState) -> Dict[str, Any]:
+        """Request was blocked by safety filters."""
+        return {
+            "kind": "request_blocked",
+            "reply": "I couldn't process that request.",
+        }
 
     def no_guidance_node(self, state: WeatherAdvisoryState) -> Dict[str, Any]:
         """Polite guidance message when query is out of scope or unsupported."""
@@ -336,6 +383,7 @@ class GraphNodes:
             "reason": resolution.reason,
             "facts_used": primary.facts_used if primary else {},
             "skipped_ids": state.get("unevaluable_ids", []),
+            "model_used": state.get("model_used"),
         }
         decision_log.append(turn_entry)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
@@ -42,6 +43,10 @@ def run_cli(thread_id: str = "cli-session-1") -> None:
         state_input = {"query": user_input}
         try:
             result = graph.invoke(state_input, config=config)
+            if os.getenv("DEBUG_REASONS") == "1":
+                reason_str = result.get("error_reason") or "none"
+                model_str = result.get("model_used") or "none"
+                print(f"[debug] reason: {reason_str}, model: {model_str}")
             reply = result.get("reply", "No response generated.")
             print(f"\nBot > {reply}")
         except Exception as err:

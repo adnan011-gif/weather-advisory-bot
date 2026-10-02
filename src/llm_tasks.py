@@ -10,14 +10,17 @@ from __future__ import annotations
 import json
 import re
 from typing import Any, Dict, List, Literal, Optional
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from src.llm_client import LLMClientProtocol, LLMError
 
 
 class ParseFailed(Exception):
-    """Raised when intent parsing fails due to unparseable JSON or invalid schema."""
-    pass
+    """Raised when intent parsing fails due to unparseable JSON, invalid schema, or LLM error."""
+
+    def __init__(self, message: str, reason: str = "invalid_json") -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class ParsedIntent(BaseModel):
@@ -41,6 +44,46 @@ class ParsedIntent(BaseModel):
         default_factory=list,
         description="List of SOP IDs explicitly cited by user (e.g. for explanation requests)"
     )
+    model_used: Optional[str] = Field(
+        default=None,
+        description="The specific model identifier that answered this query"
+    )
+
+    @field_validator("activity_tags", mode="before")
+    @classmethod
+    def _coerce_activity_tags(cls, v: Any) -> List[str]:
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(x) for x in v if x is not None]
+        return []
+
+    @field_validator("cited_sop_ids", mode="before")
+    @classmethod
+    def _coerce_cited_ids(cls, v: Any) -> List[str]:
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(x) for x in v if x is not None]
+        return []
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def _coerce_location(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s if s else None
+
+    @field_validator("time_ref", mode="before")
+    @classmethod
+    def _coerce_time_ref(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip().lower()
+        if not s or s in ("null", "none"):
+            return None
+        return s
 
 
 def _build_parse_system_prompt(vocabulary: Dict[str, Dict[str, str]]) -> str:
@@ -89,6 +132,38 @@ OUTPUT SCHEMA (JSON ONLY):
 }}"""
 
 
+def _extract_json(raw_text: str) -> Dict[str, Any]:
+    """Parse JSON text, handling markdown fences, whitespace, or surrounding text."""
+    clean = raw_text.strip()
+    if not clean:
+        raise json.JSONDecodeError("Empty JSON content", clean, 0)
+
+    # 1. Direct parse attempt
+    try:
+        data = json.loads(clean)
+        if isinstance(data, dict):
+            return data
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Markdown code fences
+    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean, re.DOTALL)
+    if fence_match:
+        data = json.loads(fence_match.group(1))
+        if isinstance(data, dict):
+            return data
+
+    # 3. Substring between outermost curly braces
+    start = clean.find("{")
+    end = clean.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        data = json.loads(clean[start : end + 1])
+        if isinstance(data, dict):
+            return data
+
+    raise json.JSONDecodeError("No valid JSON object found in text", clean, 0)
+
+
 def parse_intent(
     llm: LLMClientProtocol,
     message: str,
@@ -115,25 +190,32 @@ def parse_intent(
     user_payload = f"<user_query>\n{clean_msg}\n</user_query>"
     system_prompt = _build_parse_system_prompt(vocabulary)
 
-    last_err: Optional[Exception] = None
-    for attempt in range(2):
-        try:
-            raw_json = llm.parse_intent_raw(system=system_prompt, user_text=user_payload)
-            # Strip markdown json block if present
-            clean_json = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_json.strip())
-            data = json.loads(clean_json)
+    try:
+        raw_text = llm.parse_intent_raw(system=system_prompt, user_text=user_payload)
+    except LLMError as err:
+        raise ParseFailed(f"LLM call failed: {err.reason}", reason=err.reason) from err
 
-            # Code-level vocabulary enforcement: drop any tags not in vocabulary
-            raw_tags = data.get("activity_tags", [])
-            valid_tags = [t for t in raw_tags if isinstance(t, str) and t in vocabulary]
-            data["activity_tags"] = valid_tags
+    try:
+        data = _extract_json(raw_text)
+    except json.JSONDecodeError as err:
+        raise ParseFailed("Invalid JSON returned by model", reason="invalid_json") from err
 
-            parsed = ParsedIntent.model_validate(data)
-            return parsed
-        except (LLMError, json.JSONDecodeError, ValidationError) as err:
-            last_err = err
+    # Code-level vocabulary enforcement: drop any tags not in vocabulary
+    raw_tags = data.get("activity_tags")
+    if not isinstance(raw_tags, list):
+        raw_tags = []
+    valid_tags = [t for t in raw_tags if isinstance(t, str) and t in vocabulary]
+    data["activity_tags"] = valid_tags
 
-    raise ParseFailed(f"Could not parse user intent after retry: {last_err}") from last_err
+    try:
+        parsed = ParsedIntent.model_validate(data)
+    except ValidationError as val_err:
+        first_err = val_err.errors()[0]
+        field = first_err["loc"][-1] if first_err.get("loc") else "schema"
+        raise ParseFailed(f"Schema violation: {field}", reason=f"schema_violation:{field}") from val_err
+
+    parsed.model_used = getattr(llm, "model_used", None)
+    return parsed
 
 
 def compose_answer(

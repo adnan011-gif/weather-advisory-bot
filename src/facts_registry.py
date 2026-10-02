@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 

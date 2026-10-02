@@ -32,12 +32,12 @@ def main() -> None:
     print(f"    Timezone:      {geocode_res.timezone}")
 
     # 2. Fetch Weather
-    print(f"\n[2] Fetching live weather forecast from Open-Meteo...")
+    print("\n[2] Fetching live weather forecast from Open-Meteo...")
     weather_raw = client.fetch_weather(geocode_res.lat, geocode_res.lon)
     print(f"    Fetch Time (UTC): {weather_raw.fetch_time}")
 
     # 3. Compute Facts for 'today'
-    print(f"\n[3] Computing facts for window 'today'...")
+    print("\n[3] Computing facts for window 'today'...")
     computed = client.compute_facts(weather_raw, window_name="today")
     print(f"    Local Timezone:       {computed.timezone} (UTC+{computed.utc_offset_seconds/3600:g}h)")
     print(f"    Partly Passed Window: {computed.partly_passed}")

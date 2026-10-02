@@ -30,11 +30,13 @@ class FakeLLMClient:
         self,
         parse_responses: list[str | Exception] | None = None,
         compose_responses: list[str | Exception] | None = None,
+        model_used: str | None = "fake-primary-model",
     ) -> None:
         self.parse_responses = list(parse_responses or [])
         self.compose_responses = list(compose_responses or [])
         self.recorded_compose_payloads: list[str] = []
         self.recorded_parse_calls: list[str] = []
+        self.model_used = model_used
 
     def parse_intent_raw(self, system: str, user_text: str) -> str:
         self.recorded_parse_calls.append(user_text)

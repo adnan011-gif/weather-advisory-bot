@@ -45,6 +45,8 @@ class WeatherAdvisoryState(TypedDict, total=False):
     reply: Optional[str]
     kind: Optional[str]
     error_message: Optional[str]
+    error_reason: Optional[str]
+    model_used: Optional[str]
 
     # Internal turn parsing fields
     _parsed_intent: Optional[str]

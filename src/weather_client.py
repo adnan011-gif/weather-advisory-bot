@@ -7,11 +7,11 @@ URL encoding, facts-driven parameter construction, and local-timezone window agg
 from __future__ import annotations
 
 import datetime
-from typing import Any, Dict, List, Optional, Protocol, Tuple
+from typing import Any, Dict, List, Optional, Protocol
 import httpx
 from pydantic import BaseModel, Field
 
-from src.facts_registry import FactDefinition, FactsRegistry
+from src.facts_registry import FactsRegistry
 
 
 class LocationError(Exception):

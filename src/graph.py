@@ -62,6 +62,9 @@ def build_graph(
 
     # Add Nodes
     workflow.add_node("parse_intent", nodes.parse_intent_node)
+    workflow.add_node("parse_failed", nodes.parse_failed_node)
+    workflow.add_node("llm_unavailable", nodes.llm_unavailable_node)
+    workflow.add_node("request_blocked", nodes.request_blocked_node)
     workflow.add_node("no_guidance", nodes.no_guidance_node)
     workflow.add_node("explain_decision", nodes.explain_decision_node)
     workflow.add_node("resolve_context", nodes.resolve_context_node)
@@ -78,8 +81,14 @@ def build_graph(
 
     # 2. Conditional edge after parse_intent
     def _route_after_parse(state: WeatherAdvisoryState) -> str:
-        if state.get("kind") == "parse_failed":
-            return END
+        kind = state.get("kind")
+        if kind == "parse_failed":
+            return "parse_failed"
+        elif kind == "llm_unavailable":
+            return "llm_unavailable"
+        elif kind == "request_blocked":
+            return "request_blocked"
+
         intent = state.get("_parsed_intent")
         if intent == "out_of_scope":
             return "no_guidance"
@@ -87,20 +96,25 @@ def build_graph(
             return "explain_decision"
         elif intent == "advice":
             return "resolve_context"
-        return END
+        return "no_guidance"
 
     workflow.add_conditional_edges(
         "parse_intent",
         _route_after_parse,
         {
-            END: END,
+            "parse_failed": "parse_failed",
+            "llm_unavailable": "llm_unavailable",
+            "request_blocked": "request_blocked",
             "no_guidance": "no_guidance",
             "explain_decision": "explain_decision",
             "resolve_context": "resolve_context",
         },
     )
 
-    # 3. no_guidance & explain_decision -> END
+    # 3. Terminal outcome nodes -> END
+    workflow.add_edge("parse_failed", END)
+    workflow.add_edge("llm_unavailable", END)
+    workflow.add_edge("request_blocked", END)
     workflow.add_edge("no_guidance", END)
     workflow.add_edge("explain_decision", END)
 

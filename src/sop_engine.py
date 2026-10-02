@@ -313,7 +313,6 @@ def evaluate_all(
         Tuple of (all_results, matched_ids, unevaluable_ids)
     """
     results: List[SOPResult] = []
-    category_hazard_statuses: Dict[str, List[str]] = {}
 
     # Pass 1: Evaluate all non-clear SOPs
     non_clear_sops = [s for s in sops if s.match_type != "clear"]
