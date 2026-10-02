@@ -7,8 +7,6 @@ deterministic fallbacks, and all conditional graph routing branches using fake c
 from __future__ import annotations
 
 import json
-from pathlib import Path
-import pytest
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.graph import build_graph
@@ -178,8 +176,6 @@ def test_routing_branches():
     - explain with empty log
     - explain with a fake id
     """
-    memory = MemorySaver()
-
     # 1. parse_failed: LLM returns completely broken JSON
     bad_llm = FakeLLMClient(parse_responses=["NOT_JSON_AT_ALL", "STILL_NOT_JSON"])
     g1 = build_graph(weather_client=FakeWeatherClient(), llm=bad_llm, checkpointer=MemorySaver())

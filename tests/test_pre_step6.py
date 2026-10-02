@@ -176,6 +176,14 @@ def test_footer_contains_conditions_line_and_local_fetch_time():
     assert "Data fetched: 2026-10-02 15:30 IST" in footer
     assert ".123456" not in footer  # No microseconds
 
+    # Verify each footer item is on its own line/block separated by "\n\n"
+    parts = footer.strip().split("\n\n")
+    assert parts[0] == "---"
+    assert parts[1] == "Policy: EXR-001 (high)"
+    assert parts[2] == "Conditions (17:00-midnight): max wind gusts 42.0 km/h"
+    assert parts[3] == "Location: Bhopal, Madhya Pradesh, India"
+    assert parts[4] == "Data fetched: 2026-10-02 15:30 IST"
+
 
 def test_format_local_fetch_time_variations():
     """Test format_local_fetch_time with different timezone offsets and inputs."""
@@ -201,18 +209,18 @@ def test_window_note_appears_exactly_once_in_template_path():
         resolved_name="Bhopal",
         time_ref="this_evening",
         fetch_time="2026-10-02T10:00:00Z",
-        window_note="Window 'this_evening' is partially elapsed; evaluated for remaining period from 19:00 to 21:00 local time.",
+        window_note="Covers 19:00 to 21:00 (this evening)",
         conditions_line="Conditions (19:00-21:00): max wind gusts 15.0 km/h",
     )
 
-    note = "Window 'this_evening' is partially elapsed; evaluated for remaining period from 19:00 to 21:00 local time."
+    note = "Covers 19:00 to 21:00 (this evening)"
     assert text.count(note) == 1
     assert "Conditions (19:00-21:00):" in text
 
 
 def test_window_note_appears_exactly_once_in_llm_path():
     """Verify window_note is added by code and appears exactly once in LLM response."""
-    note = "Window 'today' is partially elapsed; evaluated for remaining period from 14:00 to midnight local time."
+    note = "Covers 14:00 to midnight (rest of today)"
     llm = FakeLLMClient(
         parse_responses=[
             json.dumps({"intent": "advice", "location": "Bhopal", "activity_tags": ["cycling"], "time_ref": "today"})
@@ -297,4 +305,79 @@ def test_window_end_displays_as_midnight_for_day_window():
 
     assert computed.window_start == "14:00"
     assert computed.window_end == "midnight"
-    assert "to midnight local time" in computed.window_note
+    assert computed.window_note == "Covers 14:00 to midnight (rest of today)"
+
+
+def test_conflict_resolver_reasons_single_and_clear():
+    """Verify resolver reasons for single matching SOP and clear SOP."""
+    from src.conflict_resolver import resolve
+
+    # 1. Single matching hazard SOP
+    sop_hazard = SOPResult(
+        sop_id="EXR-001",
+        match_type="numeric",
+        effective_severity="high",
+        priority=10,
+        rendered_advice="High wind",
+        facts_used={},
+        status="matched",
+    )
+    res_single = resolve([sop_hazard])
+    assert res_single.reason == "Only EXR-001 applied"
+
+    # 2. Clear SOP
+    sop_clear = SOPResult(
+        sop_id="CLR-EXR",
+        match_type="clear",
+        effective_severity="info",
+        priority=100,
+        rendered_advice="Conditions clear",
+        facts_used={},
+        status="matched",
+    )
+    res_clear = resolve([sop_clear])
+    assert res_clear.reason == "No hazard SOP matched; clear baseline applies"
+
+
+def test_window_note_reworded_formats():
+    """Verify window note descriptions for all window types."""
+    client = OpenMeteoClient()
+    dt_base = datetime.datetime(2026, 10, 2, 0, 0, tzinfo=datetime.timezone.utc)
+    hourly_times = [
+        (dt_base + datetime.timedelta(hours=i)).strftime("%Y-%m-%dT%H:00")
+        for i in range(72)
+    ]
+    raw = RawWeatherData(
+        payload={
+            "utc_offset_seconds": 0,
+            "timezone": "UTC",
+            "hourly": {
+                "time": hourly_times,
+                "wind_gusts_10m": [10.0] * 72,
+                "wind_speed_10m": [5.0] * 72,
+                "precipitation": [0.0] * 72,
+                "precipitation_probability": [0] * 72,
+                "uv_index": [1.0] * 72,
+                "apparent_temperature": [20.0] * 72,
+                "temperature_2m": [20.0] * 72,
+                "relative_humidity_2m": [50] * 72,
+                "surface_pressure": [1013.0] * 72,
+                "weather_code": [0] * 72,
+            },
+        },
+        fetch_time="2026-10-02T10:00:00Z",
+    )
+
+    now_local = datetime.datetime(2026, 10, 2, 10, 0, tzinfo=datetime.timezone.utc)
+
+    c_today = client.compute_facts(raw, "today", now_local=now_local)
+    assert c_today.window_note == "Covers 10:00 to midnight (rest of today)"
+
+    c_evening = client.compute_facts(raw, "this_evening", now_local=now_local)
+    assert c_evening.window_note == "Covers 17:00 to 21:00 (this evening)"
+
+    c_tomorrow = client.compute_facts(raw, "tomorrow", now_local=now_local)
+    assert c_tomorrow.window_note == "Covers 06:00 to 22:00 (tomorrow daytime)"
+
+    c_now = client.compute_facts(raw, "now", now_local=now_local)
+    assert c_now.window_note == "Covers 10:00 to 14:00 (next 3 hours)"

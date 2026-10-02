@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock
-import pytest
 
 from src.llm_client import (
     GeminiClient,
@@ -15,7 +14,6 @@ from src.llm_client import (
     parse_fallback_models,
     LLMError,
 )
-from src.llm_tasks import parse_intent, ParseFailed
 from src.graph import build_graph
 from tests.test_graph_flow import FakeWeatherClient, FakeLLMClient
 

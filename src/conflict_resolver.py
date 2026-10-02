@@ -47,7 +47,9 @@ def _sort_key(res: SOPResult) -> tuple:
 def _build_reason(primary: SOPResult, runner_up: Optional[SOPResult]) -> str:
     """Generate human-readable justification for why primary won."""
     if runner_up is None:
-        return f"SOP '{primary.sop_id}' was selected as the sole matching advisory."
+        if primary.match_type == "clear":
+            return "No hazard SOP matched; clear baseline applies"
+        return f"Only {primary.sop_id} applied"
 
     if primary.override and not runner_up.override:
         return (

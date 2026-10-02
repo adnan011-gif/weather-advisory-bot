@@ -123,13 +123,13 @@ for msg in st.session_state.messages:
                 st.markdown(f"**Primary Policy:** `{meta.get('primary_id', 'None')}` ({meta.get('severity', 'N/A')})")
                 if meta.get("also_applies"):
                     st.markdown(f"**Also Applies:** {', '.join(meta['also_applies'])}")
-                st.markdown(f"**Resolver Reason:** {meta.get('resolver_reason', 'N/A')}")
+                st.markdown(f"**Resolver reason:** {meta.get('resolver_reason', 'N/A')}")
                 if meta.get("facts_formatted"):
                     facts_bullets = "\n".join(f"- {k}: **{v}**" for k, v in meta["facts_formatted"].items())
                     st.markdown(f"**Facts Used:**\n{facts_bullets}")
                 st.markdown(f"**Location:** {meta.get('resolved_name', 'N/A')}")
                 st.markdown(f"**Data Fetched:** {meta.get('fetch_time', 'N/A')}")
-                st.markdown(f"**Answer Source:** `{meta.get('answer_source', 'N/A')}` ({meta.get('answer_reason', 'N/A')})")
+                st.markdown(f"**Answer source:** `{meta.get('answer_source', 'N/A')}` ({meta.get('answer_reason', 'N/A')})")
                 st.markdown(f"**Model Used:** `{meta.get('model_used', 'N/A')}`")
                 if meta.get("skipped_ids"):
                     st.markdown(f"**Skipped Safety Checks:** {', '.join(meta['skipped_ids'])}")
@@ -213,7 +213,12 @@ if prompt:
         # Resolution reason from decision log
         decision_log = result.get("decision_log", [])
         last_turn_log = decision_log[-1] if decision_log else {}
-        resolver_reason = last_turn_log.get("reason") or "Standard precedence evaluation."
+        resolver_reason = (
+            result.get("resolver_reason")
+            or last_turn_log.get("resolver_reason")
+            or last_turn_log.get("reason")
+            or "No hazard SOP matched; clear baseline applies"
+        )
 
         metadata = {
             "primary_id": primary_data.get("sop_id", "None"),
@@ -243,13 +248,13 @@ if prompt:
                 st.markdown(f"**Primary Policy:** `{metadata['primary_id']}` ({metadata['severity']})")
                 if metadata["also_applies"]:
                     st.markdown(f"**Also Applies:** {', '.join(metadata['also_applies'])}")
-                st.markdown(f"**Resolver Reason:** {metadata['resolver_reason']}")
+                st.markdown(f"**Resolver reason:** {metadata['resolver_reason']}")
                 if metadata["facts_formatted"]:
                     facts_bullets = "\n".join(f"- {k}: **{v}**" for k, v in metadata["facts_formatted"].items())
                     st.markdown(f"**Facts Used:**\n{facts_bullets}")
                 st.markdown(f"**Location:** {metadata['resolved_name']}")
                 st.markdown(f"**Data Fetched:** {metadata['fetch_time']}")
-                st.markdown(f"**Answer Source:** `{metadata['answer_source']}` ({metadata['answer_reason']})")
+                st.markdown(f"**Answer source:** `{metadata['answer_source']}` ({metadata['answer_reason']})")
                 st.markdown(f"**Model Used:** `{metadata['model_used']}`")
                 if metadata["skipped_ids"]:
                     st.markdown(f"**Skipped Safety Checks:** {', '.join(metadata['skipped_ids'])}")

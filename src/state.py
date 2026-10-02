@@ -38,6 +38,7 @@ class WeatherAdvisoryState(TypedDict, total=False):
     unevaluable_ids: List[str]
     primary: Optional[Dict[str, Any]]
     also_applies: List[Dict[str, Any]]
+    resolver_reason: Optional[str]
     previous_change_note: Optional[str]
 
     # Audit log and session memory

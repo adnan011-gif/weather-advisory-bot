@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
 import pytest
 
 from src.llm_client import LLMError, classify_llm_exception
-from src.llm_tasks import parse_intent, ParseFailed, ParsedIntent
+from src.llm_tasks import parse_intent, ParseFailed
 from src.graph import build_graph
 from tests.test_graph_flow import FakeWeatherClient, FakeLLMClient
 

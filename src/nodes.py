@@ -410,6 +410,7 @@ class GraphNodes:
             "primary_id": primary.sop_id if primary else None,
             "severity": primary.effective_severity if primary else None,
             "reason": resolution.reason,
+            "resolver_reason": resolution.reason,
             "facts_used": primary.facts_used if primary else {},
             "skipped_ids": state.get("unevaluable_ids", []),
             "model_used": state.get("model_used"),
@@ -420,6 +421,7 @@ class GraphNodes:
             "primary": primary.model_dump() if primary else None,
             "also_applies": [r.model_dump() for r in also_applies],
             "previous_change_note": previous_note,
+            "resolver_reason": resolution.reason,
             "decision_log": decision_log,
         }
 
@@ -533,6 +535,12 @@ class GraphNodes:
 
         raw_composed = state.get("_raw_composed")
 
+        resolver_reason = state.get("resolver_reason") or (
+            state.get("decision_log", [])[-1].get("resolver_reason")
+            if state.get("decision_log")
+            else None
+        )
+
         def _fallback(reason_text: str = "no_llm_needed") -> Dict[str, Any]:
             reply_text = templated_answer(
                 primary=primary,
@@ -552,8 +560,11 @@ class GraphNodes:
             if decision_log:
                 decision_log[-1]["answer_source"] = "template"
                 decision_log[-1]["compose_reason"] = reason_text
+                decision_log[-1]["answer_reason"] = reason_text
                 decision_log[-1]["reason"] = reason_text
                 decision_log[-1]["model_used"] = model_used
+                if resolver_reason:
+                    decision_log[-1]["resolver_reason"] = resolver_reason
             return {
                 "kind": "advice",
                 "reply": reply_text,
@@ -561,6 +572,7 @@ class GraphNodes:
                 "reason": reason_text,
                 "_compose_reason": reason_text,
                 "model_used": model_used,
+                "resolver_reason": resolver_reason,
                 "decision_log": decision_log,
             }
 
@@ -611,7 +623,7 @@ class GraphNodes:
             utc_offset_seconds=utc_offset,
         )
         if window_note:
-            main_text = f"({window_note})\n\n{raw_composed.strip()}"
+            main_text = f"{window_note}\n\n{raw_composed.strip()}"
         else:
             main_text = raw_composed.strip()
         final_reply = main_text + footer
@@ -620,8 +632,11 @@ class GraphNodes:
         if decision_log:
             decision_log[-1]["answer_source"] = "llm"
             decision_log[-1]["compose_reason"] = "llm_composed"
+            decision_log[-1]["answer_reason"] = "llm_composed"
             decision_log[-1]["reason"] = "llm_composed"
             decision_log[-1]["model_used"] = model_used
+            if resolver_reason:
+                decision_log[-1]["resolver_reason"] = resolver_reason
 
         return {
             "kind": "advice",
@@ -630,5 +645,6 @@ class GraphNodes:
             "reason": "llm_composed",
             "_compose_reason": "llm_composed",
             "model_used": model_used,
+            "resolver_reason": resolver_reason,
             "decision_log": decision_log,
         }

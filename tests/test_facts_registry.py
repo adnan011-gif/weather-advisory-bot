@@ -11,14 +11,13 @@ import pytest
 import httpx
 import yaml
 
-from src.facts_registry import FactsRegistry, FactsConfig
+from src.facts_registry import FactsRegistry
 from src.weather_client import (
     OpenMeteoClient,
     LocationError,
     WeatherAPIError,
     WindowPassedError,
     sanitize_location,
-    RawWeatherData,
 )
 
 

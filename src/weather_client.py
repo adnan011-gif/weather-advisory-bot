@@ -284,12 +284,14 @@ class OpenMeteoClient:
                 f"The requested window '{window_name}' has already ended at {end_str} local time."
             )
 
-        window_note: Optional[str] = None
-        if is_partly_passed:
-            window_note = (
-                f"Window '{window_name}' is partially elapsed; evaluated for remaining period from "
-                f"{start_str} to {end_str} local time."
-            )
+        window_desc_map = {
+            "today": "rest of today",
+            "this_evening": "this evening",
+            "tomorrow": "tomorrow daytime",
+            "now": "next 3 hours",
+        }
+        desc = window_desc_map.get(window_name, window_name.replace("_", " "))
+        window_note = f"Covers {start_str} to {end_str} ({desc})"
 
         # Hourly timestamps from API
         hourly_data = payload.get("hourly", {})

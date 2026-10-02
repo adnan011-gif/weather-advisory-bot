@@ -187,34 +187,34 @@ def build_footer(
     utc_offset_seconds: Optional[int] = None,
 ) -> str:
     """Build deterministic citation footer appended by code."""
-    lines = ["\n\n---"]
+    items = ["---"]
 
     if primary:
-        lines.append(f"Policy: {primary.sop_id} ({primary.effective_severity})")
+        items.append(f"Policy: {primary.sop_id} ({primary.effective_severity})")
 
     # Filter out clear SOPs from also_applies just in case
     filtered_also = [r for r in also_applies if r.match_type != "clear"]
     if filtered_also:
         also_str = ", ".join(f"{r.sop_id} ({r.effective_severity})" for r in filtered_also)
-        lines.append(f"Also applies: {also_str}")
+        items.append(f"Also applies: {also_str}")
 
     if conditions_line:
-        lines.append(conditions_line)
+        items.append(conditions_line)
 
     if skipped_ids:
-        lines.append(
+        items.append(
             f"Note: {len(skipped_ids)} safety checks could not be run (missing data): {', '.join(skipped_ids)}"
         )
 
-    lines.append(f"Location: {resolved_name}")
+    items.append(f"Location: {resolved_name}")
     formatted_fetch = format_local_fetch_time(
         fetch_time,
         timezone_name=timezone_name,
         utc_offset_seconds=utc_offset_seconds,
     )
-    lines.append(f"Data fetched: {formatted_fetch}")
+    items.append(f"Data fetched: {formatted_fetch}")
 
-    return "\n".join(lines)
+    return "\n\n" + "\n\n".join(items)
 
 
 def templated_answer(
@@ -247,7 +247,7 @@ def templated_answer(
         body_parts.append(f"[{previous_change_note}]")
 
     if window_note:
-        body_parts.append(f"({window_note})")
+        body_parts.append(window_note)
 
     if primary:
         body_parts.append(primary.rendered_advice)

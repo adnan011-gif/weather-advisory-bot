@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from src.validator import validate_reply, build_footer, templated_answer
 from src.sop_engine import SOPResult
 
