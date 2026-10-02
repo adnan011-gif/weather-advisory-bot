@@ -242,8 +242,8 @@ STRICT CONSTRAINTS:
 1. Do NOT add any new advice, recommendations, or restrictions not provided in 'primary_sop_advice' or 'also_applies'.
 2. Do NOT invent, extrapolate, or introduce any new numbers, temperatures, or thresholds.
 3. Lead immediately with the primary safety verdict / advisory.
-4. Clearly state the resolved location name and the evaluated time window.
-5. If 'window_note' is present, politely explain that the time window is partially elapsed.
+4. Clearly state the resolved location name. Do NOT mention the time window or weather observation window (this is added separately by code).
+5. Do NOT mention window notes, partial elapse, or time window bounds.
 6. If 'caveat_skipped_checks' is present, explicitly include that caveat statement.
 7. If 'previous_primary_changed_note' is present, mention the update from the previous turn.
 8. Maintain a calm, objective, and supportive tone."""

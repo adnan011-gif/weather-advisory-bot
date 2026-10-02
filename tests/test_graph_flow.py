@@ -335,7 +335,8 @@ def test_raw_user_message_never_appears_in_compose_payload():
             json.dumps({"intent": "advice", "location": "Bhopal", "activity_tags": ["cycling"], "time_ref": "today"})
         ]
     )
-    graph = build_graph(weather_client=FakeWeatherClient(), llm=llm, checkpointer=MemorySaver())
+    weather_client = FakeWeatherClient(facts_override={"wind_gusts": 42.0})
+    graph = build_graph(weather_client=weather_client, llm=llm, checkpointer=MemorySaver())
     graph.invoke({"query": raw_query}, config={"configurable": {"thread_id": "payload-isolation-test"}})
 
     # Check recorded compose payload

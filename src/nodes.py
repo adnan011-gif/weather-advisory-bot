@@ -21,7 +21,7 @@ from src.sop_engine import evaluate_all, SOPResult, extract_thresholds
 from src.conflict_resolver import resolve
 from src.llm_client import LLMClientProtocol, LLMError
 from src.llm_tasks import parse_intent, compose_answer, ParseFailed
-from src.validator import validate_reply, build_footer, templated_answer
+from src.validator import validate_reply, build_footer, templated_answer, format_conditions_line
 
 
 class GraphNodes:
@@ -303,6 +303,8 @@ class GraphNodes:
                 "facts": computed.facts,
                 "utc_offset_seconds": computed.utc_offset_seconds,
                 "window_note": computed.window_note,
+                "window_start": computed.window_start,
+                "window_end": computed.window_end,
             }
         except WindowPassedError as err:
             return {
@@ -399,9 +401,25 @@ class GraphNodes:
         """Compose language response strictly from structured payload (no raw user message)."""
         primary_data = state.get("primary")
         if not primary_data:
-            return {"_raw_composed": None}
+            return {
+                "_raw_composed": None,
+                "answer_source": "template",
+                "_compose_reason": "no_primary",
+                "reason": "no_primary",
+            }
 
         primary = SOPResult(**primary_data)
+
+        # Policy: if primary SOP is match_type clear OR effective severity is info,
+        # skip the LLM compose call and use templated_answer directly.
+        if primary.match_type == "clear" or primary.effective_severity == "info":
+            return {
+                "_raw_composed": None,
+                "answer_source": "template",
+                "_compose_reason": "no_llm_needed",
+                "reason": "no_llm_needed",
+            }
+
         also_data = state.get("also_applies", [])
         also_applies = [SOPResult(**r) for r in also_data]
 
@@ -412,7 +430,8 @@ class GraphNodes:
                 f"{len(skipped_ids)} safety checks could not be run (missing data): {', '.join(skipped_ids)}."
             )
 
-        # Build clean payload containing zero user text
+        # Build clean payload containing zero user text.
+        # Note: window_note is NOT included; time window note is added strictly by code.
         payload = {
             "activity_tags": state.get("activity_tags", []),
             "time_ref": state.get("time_ref", "today"),
@@ -431,16 +450,24 @@ class GraphNodes:
             ],
             "facts_used": primary.facts_used,
             "caveat_skipped_checks": caveat_skipped,
-            "window_note": state.get("window_note"),
             "previous_primary_changed_note": state.get("previous_change_note"),
         }
 
         try:
             raw_composed = compose_answer(self.llm, payload)
-            return {"_raw_composed": raw_composed}
-        except LLMError:
+            return {
+                "_raw_composed": raw_composed,
+                "answer_source": "llm",
+                "_compose_reason": "llm_composed",
+            }
+        except LLMError as err:
             # Fall back to templated answer on LLM exception
-            return {"_raw_composed": None}
+            return {
+                "_raw_composed": None,
+                "answer_source": "template",
+                "_compose_reason": f"llm_error:{err.reason}",
+                "reason": f"llm_error:{err.reason}",
+            }
 
     # 11. Validate Answer (Deterministic)
     def validate_answer_node(self, state: WeatherAdvisoryState) -> Dict[str, Any]:
@@ -457,10 +484,26 @@ class GraphNodes:
         window_note = state.get("window_note")
         assumed_time = state.get("assumed_time", False)
         prev_note = state.get("previous_change_note")
+        tz_name = state.get("timezone")
+        utc_offset = state.get("utc_offset_seconds")
+
+        # Determine window label for Conditions line
+        win_start = state.get("window_start")
+        win_end = state.get("window_end")
+        if win_start and win_end:
+            window_label = f"{win_start}-{win_end}"
+        else:
+            window_label = time_ref
+
+        conditions_line = format_conditions_line(
+            window_label=window_label,
+            facts_used=primary.facts_used if primary else None,
+            all_facts=state.get("facts"),
+        )
 
         raw_composed = state.get("_raw_composed")
 
-        def _fallback() -> Dict[str, Any]:
+        def _fallback(reason_text: str = "no_llm_needed") -> Dict[str, Any]:
             reply_text = templated_answer(
                 primary=primary,
                 also_applies=also_applies,
@@ -471,11 +514,26 @@ class GraphNodes:
                 window_note=window_note,
                 assumed_time=assumed_time,
                 previous_change_note=prev_note,
+                conditions_line=conditions_line,
+                timezone_name=tz_name,
+                utc_offset_seconds=utc_offset,
             )
-            return {"kind": "advice", "reply": reply_text}
+            decision_log = list(state.get("decision_log", []))
+            if decision_log:
+                decision_log[-1]["answer_source"] = "template"
+                decision_log[-1]["compose_reason"] = reason_text
+                decision_log[-1]["reason"] = reason_text
+            return {
+                "kind": "advice",
+                "reply": reply_text,
+                "answer_source": "template",
+                "reason": reason_text,
+                "_compose_reason": reason_text,
+            }
 
         if not raw_composed:
-            return _fallback()
+            compose_reason = state.get("_compose_reason", "no_llm_needed")
+            return _fallback(reason_text=compose_reason)
 
         # Build complete allow-list of valid numbers
         allowed_numbers: Set[float | int] = set()
@@ -502,22 +560,38 @@ class GraphNodes:
 
         # Check validation
         known_ids = set(self.sops_dict.keys())
-        is_valid, reason = validate_reply(raw_composed, allowed_numbers, known_ids)
+        is_valid, val_reason = validate_reply(raw_composed, allowed_numbers, known_ids)
 
         if not is_valid:
             # Hallucinated number or unknown SOP ID -> route to templated answer
-            return _fallback()
+            return _fallback(reason_text=f"validation_failed:{val_reason}")
 
-        # Validation passed -> append code-built citation footer
+        # Validation passed -> code adds window_note exactly once and appends citation footer
         footer = build_footer(
             primary=primary,
             also_applies=also_applies,
             resolved_name=resolved_name,
             fetch_time=fetch_time,
             skipped_ids=skipped_ids,
+            conditions_line=conditions_line,
+            timezone_name=tz_name,
+            utc_offset_seconds=utc_offset,
         )
-        final_reply = raw_composed.strip() + footer
+        if window_note:
+            main_text = f"({window_note})\n\n{raw_composed.strip()}"
+        else:
+            main_text = raw_composed.strip()
+        final_reply = main_text + footer
+
+        decision_log = list(state.get("decision_log", []))
+        if decision_log:
+            decision_log[-1]["answer_source"] = "llm"
+            decision_log[-1]["compose_reason"] = "llm_composed"
+
         return {
             "kind": "advice",
             "reply": final_reply,
+            "answer_source": "llm",
+            "reason": "llm_composed",
+            "_compose_reason": "llm_composed",
         }

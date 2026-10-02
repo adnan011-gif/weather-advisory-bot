@@ -29,6 +29,8 @@ class WeatherAdvisoryState(TypedDict, total=False):
     facts: Dict[str, Any]
     raw_fetch_time: Optional[str]
     window_note: Optional[str]
+    window_start: Optional[str]
+    window_end: Optional[str]
 
     # SOP Evaluation and Conflict Resolution
     results: List[Dict[str, Any]]
@@ -47,6 +49,9 @@ class WeatherAdvisoryState(TypedDict, total=False):
     error_message: Optional[str]
     error_reason: Optional[str]
     model_used: Optional[str]
+    answer_source: Optional[str]
+    reason: Optional[str]
+    _compose_reason: Optional[str]
 
     # Internal turn parsing fields
     _parsed_intent: Optional[str]

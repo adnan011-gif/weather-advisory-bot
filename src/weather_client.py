@@ -51,6 +51,8 @@ class ComputedFactsResult(BaseModel):
     window_name: str
     partly_passed: bool = False
     window_note: Optional[str] = None
+    window_start: Optional[str] = None
+    window_end: Optional[str] = None
     fetch_time: str
     timezone: str
     utc_offset_seconds: int
@@ -274,16 +276,19 @@ class OpenMeteoClient:
         effective_start, effective_end, is_partly_passed, is_fully_passed = (
             self.facts_registry.resolve_window(window_name, now_local)
         )
+        start_str = effective_start.strftime("%H:%M")
+        end_str = "midnight" if (effective_end.hour == 0 and effective_end.minute == 0) else effective_end.strftime("%H:%M")
+
         if is_fully_passed:
             raise WindowPassedError(
-                f"The requested window '{window_name}' has already ended at {effective_end.strftime('%H:%M')} local time."
+                f"The requested window '{window_name}' has already ended at {end_str} local time."
             )
 
         window_note: Optional[str] = None
         if is_partly_passed:
             window_note = (
                 f"Window '{window_name}' is partially elapsed; evaluated for remaining period from "
-                f"{effective_start.strftime('%H:%M')} to {effective_end.strftime('%H:%M')} local time."
+                f"{start_str} to {end_str} local time."
             )
 
         # Hourly timestamps from API
@@ -361,6 +366,8 @@ class OpenMeteoClient:
             window_name=window_name,
             partly_passed=is_partly_passed,
             window_note=window_note,
+            window_start=start_str,
+            window_end=end_str,
             fetch_time=fetch_time,
             timezone=timezone_name,
             utc_offset_seconds=utc_offset_seconds,
