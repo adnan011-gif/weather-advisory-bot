@@ -6,6 +6,7 @@ All business logic, fallback branching, state persistence, and verification are 
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from src.state import WeatherAdvisoryState
 from src.facts_registry import FactsRegistry
@@ -17,6 +18,7 @@ from src.weather_client import (
     sanitize_location,
 )
 from src.sop_schema import SOP
+from src.sop_loader import load_sops, derive_vocabulary, SOPLoadError
 from src.sop_engine import evaluate_all, SOPResult, extract_thresholds
 from src.conflict_resolver import resolve
 from src.llm_client import LLMClientProtocol, LLMError
@@ -34,13 +36,27 @@ class GraphNodes:
         sops: List[SOP],
         facts_registry: FactsRegistry,
         vocabulary: Dict[str, Dict[str, str]],
+        sop_dir: Optional[str | Path] = None,
+        facts_path: Optional[str | Path] = None,
     ) -> None:
         self.weather_client = weather_client
         self.llm = llm
+        base_dir = Path(__file__).resolve().parent.parent
+        self.sop_dir = Path(sop_dir) if sop_dir else (base_dir / "sops")
+        self.facts_path = Path(facts_path) if facts_path else (base_dir / "config" / "facts.yaml")
         self.sops = sops
         self.sops_dict: Dict[str, SOP] = {s.id: s for s in sops}
         self.facts_registry = facts_registry
         self.vocabulary = vocabulary
+
+    def reload_policies(self) -> None:
+        """Reload facts.yaml and all SOP YAML files from disk at the start of every turn."""
+        self.facts_registry = FactsRegistry(config_path=self.facts_path)
+        if hasattr(self.weather_client, "facts_registry"):
+            self.weather_client.facts_registry = self.facts_registry
+        self.sops = load_sops(self.sop_dir, facts_registry=self.facts_registry)
+        self.sops_dict = {s.id: s for s in self.sops}
+        self.vocabulary = derive_vocabulary(self.sops)
 
     # 1. Parse Intent (LLM)
     def parse_intent_node(self, state: WeatherAdvisoryState) -> Dict[str, Any]:
@@ -50,6 +66,17 @@ class GraphNodes:
         msgs = list(state.get("messages", []))
         msgs.append({"role": "user", "content": query})
         msgs = msgs[-10:]
+
+        # SOP Freshness: reload SOPs and facts.yaml from disk at start of EVERY turn
+        try:
+            self.reload_policies()
+        except (SOPLoadError, ValueError, FileNotFoundError) as err:
+            return {
+                "messages": msgs,
+                "kind": "format_error",
+                "reply": f"Policy configuration error: {err}",
+                "error_message": str(err),
+            }
 
         try:
             parsed = parse_intent(self.llm, query, self.vocabulary)
@@ -455,10 +482,12 @@ class GraphNodes:
 
         try:
             raw_composed = compose_answer(self.llm, payload)
+            model_used = getattr(self.llm, "model_used", None) or state.get("model_used")
             return {
                 "_raw_composed": raw_composed,
                 "answer_source": "llm",
                 "_compose_reason": "llm_composed",
+                "model_used": model_used,
             }
         except LLMError as err:
             # Fall back to templated answer on LLM exception
@@ -486,6 +515,7 @@ class GraphNodes:
         prev_note = state.get("previous_change_note")
         tz_name = state.get("timezone")
         utc_offset = state.get("utc_offset_seconds")
+        model_used = state.get("model_used") or getattr(self.llm, "model_used", None)
 
         # Determine window label for Conditions line
         win_start = state.get("window_start")
@@ -523,12 +553,15 @@ class GraphNodes:
                 decision_log[-1]["answer_source"] = "template"
                 decision_log[-1]["compose_reason"] = reason_text
                 decision_log[-1]["reason"] = reason_text
+                decision_log[-1]["model_used"] = model_used
             return {
                 "kind": "advice",
                 "reply": reply_text,
                 "answer_source": "template",
                 "reason": reason_text,
                 "_compose_reason": reason_text,
+                "model_used": model_used,
+                "decision_log": decision_log,
             }
 
         if not raw_composed:
@@ -587,6 +620,8 @@ class GraphNodes:
         if decision_log:
             decision_log[-1]["answer_source"] = "llm"
             decision_log[-1]["compose_reason"] = "llm_composed"
+            decision_log[-1]["reason"] = "llm_composed"
+            decision_log[-1]["model_used"] = model_used
 
         return {
             "kind": "advice",
@@ -594,4 +629,6 @@ class GraphNodes:
             "answer_source": "llm",
             "reason": "llm_composed",
             "_compose_reason": "llm_composed",
+            "model_used": model_used,
+            "decision_log": decision_log,
         }

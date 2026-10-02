@@ -7,7 +7,6 @@ Never logs secrets or user inputs.
 
 from __future__ import annotations
 
-import os
 import re
 import time
 from typing import List, Optional, Protocol
@@ -119,6 +118,9 @@ class LLMClientProtocol(Protocol):
         ...
 
 
+from src.config import get_config_value
+
+
 class GeminiClient:
     """Production LLM client utilizing google-genai SDK with model fallback and quota cooldown."""
 
@@ -132,41 +134,31 @@ class GeminiClient:
         backoffs: Optional[List[float]] = None,
     ) -> None:
         # Load API key: explicit > env > streamlit.secrets
-        key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        key = (
+            api_key
+            or get_config_value("GEMINI_API_KEY")
+            or get_config_value("GOOGLE_API_KEY")
+        )
         if not key:
-            try:
-                import streamlit as st  # type: ignore
-                if hasattr(st, "secrets"):
-                    key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
-            except Exception:
-                pass
-
-        if not key:
-            raise LLMError("GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured in environment or secrets.", reason="api_error:auth")
+            raise LLMError(
+                "GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured in environment or secrets.",
+                reason="api_error:auth",
+            )
 
         # Load primary model name: explicit > env > streamlit.secrets > default
-        primary = model_name or os.getenv("GEMINI_MODEL")
-        if not primary:
-            try:
-                import streamlit as st  # type: ignore
-                if hasattr(st, "secrets"):
-                    primary = st.secrets.get("GEMINI_MODEL")
-            except Exception:
-                pass
-        self.primary_model = primary or "gemini-2.5-flash"
+        self.primary_model = (
+            model_name
+            or get_config_value("GEMINI_MODEL")
+            or "gemini-2.5-flash"
+        )
         self.model_name = self.primary_model
 
         # Load fallback models: explicit > env > streamlit.secrets > empty
-        fb_raw = fallback_models
-        if fb_raw is None:
-            fb_raw = os.getenv("GEMINI_FALLBACK_MODELS")
-        if fb_raw is None:
-            try:
-                import streamlit as st  # type: ignore
-                if hasattr(st, "secrets"):
-                    fb_raw = st.secrets.get("GEMINI_FALLBACK_MODELS")
-            except Exception:
-                pass
+        fb_raw = (
+            fallback_models
+            if fallback_models is not None
+            else get_config_value("GEMINI_FALLBACK_MODELS")
+        )
 
         if isinstance(fb_raw, list):
             self.fallback_models = [m for m in fb_raw if m != self.primary_model]

@@ -13,7 +13,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from src.state import WeatherAdvisoryState
 from src.facts_registry import FactsRegistry
-from src.sop_loader import load_sops, derive_vocabulary
+from src.sop_loader import load_sops, derive_vocabulary, SOPLoadError
 from src.weather_client import WeatherClientProtocol, OpenMeteoClient
 from src.llm_client import LLMClientProtocol, GeminiClient
 from src.nodes import GraphNodes
@@ -43,8 +43,12 @@ def build_graph(
     config_file = Path(facts_path) if facts_path else (base_dir / "config" / "facts.yaml")
 
     facts_reg = FactsRegistry(config_path=config_file)
-    sops = load_sops(sop_path, facts_reg)
-    vocabulary = derive_vocabulary(sops)
+    try:
+        sops = load_sops(sop_path, facts_reg)
+        vocabulary = derive_vocabulary(sops)
+    except SOPLoadError:
+        sops = []
+        vocabulary = {}
 
     w_client = weather_client or OpenMeteoClient(facts_registry=facts_reg)
     llm_client = llm or GeminiClient()
@@ -56,6 +60,8 @@ def build_graph(
         sops=sops,
         facts_registry=facts_reg,
         vocabulary=vocabulary,
+        sop_dir=sop_path,
+        facts_path=config_file,
     )
 
     workflow = StateGraph(WeatherAdvisoryState)
@@ -82,7 +88,9 @@ def build_graph(
     # 2. Conditional edge after parse_intent
     def _route_after_parse(state: WeatherAdvisoryState) -> str:
         kind = state.get("kind")
-        if kind == "parse_failed":
+        if kind == "format_error":
+            return END
+        elif kind == "parse_failed":
             return "parse_failed"
         elif kind == "llm_unavailable":
             return "llm_unavailable"
@@ -102,6 +110,7 @@ def build_graph(
         "parse_intent",
         _route_after_parse,
         {
+            END: END,
             "parse_failed": "parse_failed",
             "llm_unavailable": "llm_unavailable",
             "request_blocked": "request_blocked",
